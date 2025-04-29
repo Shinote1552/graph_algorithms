@@ -189,8 +189,8 @@ Special cases handled:
     - Graph module (s21_graph.h)
     - Public ACO header (ant_colony_optimization_public.h)
 
-### Performance Considerations ###
-    - Memory: O(ants*N + N²) for N vertices
-    - Time: O(iterations * ants * N²)
+### What can be further improved in this algorithm? ###
+    - Use Memory Pools 
     - Parallelization opportunities in ant movement phase
-    - you can use SIMD to force operations with matrix
+    - You can use SIMD to force operations with matrix
+    - Modify the algorithm with Elite Ants and other innovations

@@ -10,6 +10,8 @@ This project implements comprehensive graph algorithms and data structures inclu
 - Traveling Salesman Problem (Ant Colony Optimization)
 - Supporting data structures (Stack, Queue)
 
+- Part 6. Bonus is not realized
+
 ## Authors
 - **edmurepi | TTGLShinote**
 - **foetidpo**
