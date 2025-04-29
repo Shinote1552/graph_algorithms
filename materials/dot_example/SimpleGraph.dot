@@ -1,0 +1,20 @@
+graph {
+    bgcolor="lightgray";
+    rankdir=LR; // Ориентация графа слева направо
+    size="8,5"; // Размер графа
+    node [shape=circle]; // Форма вершин
+    overlap=false;  // Избегать наложения вершин
+    splines=true;   // Использовать изогнутые ребра для лучшей читаемости
+    nodesep=3.0;  // Расстояние между узлами на одном уровне
+    ranksep=1.0;  // Расстояние между уровнями
+
+    a [color="blue", fillcolor="lightblue", style=filled];
+    b [color="red", fillcolor="pink", style=filled];
+    c [color="green", fillcolor="lightgreen", style=filled];
+    d [color="black", fillcolor="darkgray", style=filled];
+    
+    a -- b [label="5", color="blue" , fontcolor="blue"];  // Ненаправленное ребро между a и b с весом 5
+    b -- c [dir=forward, label="10", color="red", fontcolor="red"];  // Направленное ребро от b к c с весом 10
+    c -- d [dir=forward, label="5", color="green", fontcolor="green"];  // Направленное ребро от c к d с весом 5
+    d -- b [dir=forward, label="20", color="black", fontcolor="black"];  // Направленное ребро от d к b с весом 20
+}
