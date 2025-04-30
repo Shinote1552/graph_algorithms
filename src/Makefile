@@ -266,6 +266,9 @@ gcov_report: setup_dirs ./../code-samples/test_bin/main_test_gcov
 
 # MAIN TARGETS
 
+mem_leaks:
+	CK_FORK=no valgrind -s --track-origins=yes --tool=memcheck --leak-check=full \
+	--show-leak-kinds=all --log-file=RESULT_VALGRIND.txt ../code-samples/cli_bin/GAC
 
 filter:
 	lcov --ignore-errors empty,unused,inconsistent --extract res.info $(GCOV_FILTERED_FILES) -o res_filtered.info

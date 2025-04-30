@@ -112,7 +112,7 @@ void handle_bfs(graph_t *graph) {
     printf("Invalid vertex!\n");
     return;
   }
-  my_timer_t timer;
+  my_timer_t timer = {0};
   timer_start(&timer);
   graph_traversal_result_t *result = traversal_result_create(get_order(graph));
   breadth_first_search(graph, start_vertex, result);
@@ -143,7 +143,7 @@ void handle_dfs(graph_t *graph) {
     printf("Invalid vertex!\n");
     return;
   }
-  my_timer_t timer;
+  my_timer_t timer = {0};
   timer_start(&timer);
   graph_traversal_result_t *result = traversal_result_create(get_order(graph));
   depth_first_search(graph, start_vertex, result);
@@ -181,7 +181,7 @@ void handle_shortest_path(graph_t *graph) {
     printf("\n):\tInvalid vertices!\t:(\n");
     return;
   }
-  my_timer_t timer;
+  my_timer_t timer = {0};
   timer_start(&timer);
   int distance = get_shortest_path_between_vertices(
       graph, vertex1 - 1, vertex2 - 1);  // -1 for 0-based index
@@ -196,32 +196,42 @@ void handle_shortest_path(graph_t *graph) {
 }
 
 void handle_all_shortest_paths(graph_t *graph) {
-  if (graph == NULL || graph->adjacency == NULL) {
-    printf("\n):\tGraph is not loaded!\t:(\n");
+  if (!graph || !graph->adjacency) {
+    printf("\nError: Graph not loaded!\n");
     return;
   }
   int size = get_order(graph);
-  int **dist = (int **)malloc(size * sizeof(int *));
-  for (int i = 0; i < size; i++) {
-    dist[i] = (int *)malloc(size * sizeof(int));
+  if (size <= 0) {
+    printf("\nError: Invalid graph size\n");
+    return;
   }
-  my_timer_t timer;
+  int **dist = (int **)calloc(size, sizeof(int *));
+  if (!dist) {
+    printf("\nError: Memory allocation failed\n");
+    return;
+  }
+  for (int i = 0; i < size; i++) {
+    dist[i] = (int *)calloc(size, sizeof(int));
+    if (!dist[i]) {
+      printf("\nError: Memory allocation failed\n");
+      for (int j = 0; j < i; j++) free(dist[j]);
+      free(dist);
+      return;
+    }
+  }
+  my_timer_t timer = {0};
   timer_start(&timer);
-  int result_code = get_shortest_paths_between_all_vertices(graph, dist);
-  double time_spent = timer_stop(&timer);
-  if (result_code == 0) {
-    printf("________________________________________________\n");
-    printf("Shortest paths between all vertices:\n");
+  int result = get_shortest_paths_between_all_vertices(graph, dist);
+  double time = timer_stop(&timer);
+  if (result == 0) {
+    printf("\nShortest paths between all vertices:\n");
     printf("________________________________________________\n");
     print_matrix(dist, size);
   } else {
-    printf("________________________________________________\n");
-    printf("\n):\tError calculating shortest paths\t:(\n");
+    printf("\nError calculating shortest paths\n");
   }
-  print_execution_time(time_spent);
-  for (int i = 0; i < size; i++) {
-    free(dist[i]);
-  }
+  print_execution_time(time);
+  for (int i = 0; i < size; i++) free(dist[i]);
   free(dist);
 }
 
@@ -231,11 +241,11 @@ void handle_mst(graph_t *graph) {
     return;
   }
   int size = get_order(graph);
-  int **mst = (int **)malloc(size * sizeof(int *));
+  int **mst = (int **)calloc(size, sizeof(int *));
   for (int i = 0; i < size; i++) {
-    mst[i] = (int *)malloc(size * sizeof(int));
+    mst[i] = (int *)calloc(size, sizeof(int));
   }
-  my_timer_t timer;
+  my_timer_t timer = {0};
   timer_start(&timer);
   int result_code = get_least_spanning_tree(graph, mst);
   double time_spent = timer_stop(&timer);
@@ -269,7 +279,7 @@ void handle_tsp(graph_t *graph) {
                                .max_iterations = MAX_ITERATIONS_K};
 
   tsm_result_t *result = tsm_result_create();
-  my_timer_t timer;
+  my_timer_t timer = {0};
   timer_start(&timer);
   solve_traveling_salesman_problem(result, graph, &params);
   double time_spent = timer_stop(&timer);
@@ -285,44 +295,72 @@ void handle_tsp(graph_t *graph) {
 }
 
 int input_adjacency_matrix(graph_t **graph) {
-  int size;
+  char input[256] = {0};
+  int size = 0;
+  while (getchar() != '\n');
   printf("Enter the number of vertices (or 'q' to cancel): ");
-  char input[10];
-  if (scanf("%9s", input) != 1 || tolower(input[0]) == 'q') {
+  if (fgets(input, sizeof(input), stdin) == NULL) {
+    printf("\nInput error occurred!\n");
     return 0;
   }
-  size = atoi(input);
-  if (size <= 0) {
-    printf("\n):\tInvalid size! Size must be positive integer.\t:(\n");
+  input[strcspn(input, "\n")] = '\0';
+  if (tolower(input[0]) == 'q') {
     return 0;
+  }
+  char *endptr;
+  size = strtol(input, &endptr, 10);
+  if (*endptr != '\0' || size <= 0) {
+    printf("\nInvalid size! Size must be positive integer.\n");
+    return 0;
+  }
+  if (*graph != NULL) {
+    graph_delete(*graph);
+    *graph = NULL;
   }
   *graph = graph_create(size);
-  if (*graph == NULL) {
-    printf("\n):\tError creating graph structure!\t:(\n");
+  if (*graph == NULL || (*graph)->adjacency == NULL) {
+    printf("\nError creating graph structure!\n");
     return 0;
+  }
+  for (int i = 0; i < size; i++) {
+    for (int j = 0; j < size; j++) {
+      (*graph)->adjacency->data[i][j] = 0;
+    }
   }
   printf("Enter adjacency matrix (%dx%d, row by row):\n", size, size);
   printf("(Enter %d values for each row separated by spaces)\n", size);
   for (int i = 0; i < size; i++) {
     printf(" Row %d: ", i + 1);
+    if (fgets(input, sizeof(input), stdin) == NULL) {
+      printf("\nInput error occurred!\n");
+      graph_delete(*graph);
+      *graph = NULL;
+      return 0;
+    }
+    char *token = strtok(input, " \t\n");
     for (int j = 0; j < size; j++) {
-      if (scanf("%d", &(*graph)->adjacency->data[i][j]) != 1) {
-        printf("\n):\tInvalid input! Please enter integers only.\t:(\n");
+      if (token == NULL) {
+        printf("\nNot enough values in row %d!\n", i + 1);
         graph_delete(*graph);
         *graph = NULL;
         return 0;
       }
-    }
-  }
-  for (int i = 0; i < size; i++) {
-    if ((*graph)->adjacency->data[i][i] != 0) {
-      printf("\n):\tWarning: Diagonal element [%d][%d] is not zero.\t:(\n", i,
-             i);
+      char *end = NULL;
+      long value = strtol(token, &end, 10);
+      if (*end != '\0' && !isspace((unsigned char)*end)) {
+        printf("\nInvalid input '%s'! Please enter integers only.\n", token);
+        graph_delete(*graph);
+        *graph = NULL;
+        return 0;
+      }
+      (*graph)->adjacency->data[i][j] = (int)value;
+      token = strtok(NULL, " \t\n");
     }
   }
   printf("Graph created successfully with %d vertices.\n", size);
   return 1;
 }
+
 char *get_current_directory() {
   static char cwd[PATH_MAX];
   if (getcwd(cwd, sizeof(cwd))) {
