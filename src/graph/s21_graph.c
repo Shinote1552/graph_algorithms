@@ -11,12 +11,12 @@
 graph_t* graph_create(int size) {
   graph_t* graph = NULL;
   bool success = true;
-  graph = (graph_t*)malloc(sizeof(graph_t));
+  graph = (graph_t*)calloc(1, sizeof(graph_t));
   if (!graph) {
     success = false;
   }
   if (success) {
-    graph->adjacency = (matrix_t*)malloc(sizeof(matrix_t));
+    graph->adjacency = (matrix_t*)calloc(1, sizeof(matrix_t));
     if (!graph->adjacency) {
       success = false;
     }
@@ -26,11 +26,20 @@ graph_t* graph_create(int size) {
     graph->adjacency->data = allocate_matrix(size);
     if (!graph->adjacency->data) {
       success = false;
+    } else {
+      for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+          graph->adjacency->data[i][j] = 0;
+        }
+      }
     }
   }
   if (!success) {
     if (graph) {
       if (graph->adjacency) {
+        if (graph->adjacency->data) {
+          free_matrix(graph->adjacency->data, graph->adjacency->size);
+        }
         free(graph->adjacency);
       }
       free(graph);
@@ -67,28 +76,6 @@ int get_order(graph_t* graph) {
   return graph->adjacency->size;
 }
 
-static bool validate_input(graph_t* graph) {
-  if (!graph) {
-    return false;
-  }
-  return true;
-}
-
-static FILE* open_graph_file(const char* filename) {
-  FILE* file = fopen(filename, "r");
-  if (!file) {
-    printf("Failed to open file while load_graph_from_file\n");
-  }
-  return file;
-}
-
-static bool read_graph_size(FILE* file, int* size) {
-  if (fscanf(file, "%d", size) != 1) {
-    return false;
-  }
-  return true;
-}
-
 static bool prepare_graph_structure(graph_t* graph, int size) {
   // Clean up existing matrix if size doesn't match
   if (graph->adjacency && graph->adjacency->size != size) {
@@ -115,17 +102,6 @@ static bool prepare_graph_structure(graph_t* graph, int size) {
   return true;
 }
 
-static bool read_matrix_data(FILE* file, matrix_t* matrix) {
-  for (int i = 0; i < matrix->size; i++) {
-    for (int j = 0; j < matrix->size; j++) {
-      if (fscanf(file, "%d", &matrix->data[i][j]) != 1) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
 static void cleanup_on_failure(graph_t* graph) {
   if (graph->adjacency) {
     free_matrix(graph->adjacency->data, graph->adjacency->size);
@@ -142,18 +118,38 @@ static void cleanup_on_failure(graph_t* graph) {
  * @return true if success false if error
  */
 bool load_graph_from_file(graph_t* graph, const char* filename) {
-  if (!validate_input(graph)) return false;
-  FILE* file = open_graph_file(filename);
-  if (!file) return false;
-  bool success = false;
+  if (!graph || !filename) {
+    fprintf(stderr, "Invalid input parameters\n");
+    return false;
+  }
+  FILE* file = fopen(filename, "r");
+  if (!file) {
+    fprintf(stderr, "Failed to open file: %s\n", filename);
+    return false;
+  }
   int size = 0;
-  if (read_graph_size(file, &size) && prepare_graph_structure(graph, size) &&
-      read_matrix_data(file, graph->adjacency)) {
-    success = true;
+  if (fscanf(file, "%d", &size) != 1 || size <= 0) {
+    fclose(file);
+    fprintf(stderr, "Invalid graph size in file\n");
+    return false;
+  }
+  if (!prepare_graph_structure(graph, size)) {
+    fclose(file);
+    fprintf(stderr, "Failed to prepare graph structure\n");
+    return false;
+  }
+  bool success = true;
+  for (int i = 0; i < size && success; i++) {
+    for (int j = 0; j < size && success; j++) {
+      if (fscanf(file, "%d", &graph->adjacency->data[i][j]) != 1) {
+        success = false;
+      }
+    }
   }
   fclose(file);
   if (!success) {
     cleanup_on_failure(graph);
+    fprintf(stderr, "Error reading matrix data from file\n");
   }
   return success;
 }
